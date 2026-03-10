@@ -50,6 +50,9 @@ export default function Home() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
   const [error, setError] = useState("");
+  const [activeMobileTab, setActiveMobileTab] = useState<"custom" | "story" | "favorites">("custom");
+  const [isMobile, setIsMobile] = useState(false);
+  const [showAdviceOnMobile, setShowAdviceOnMobile] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("moonstory-saved-stories");
@@ -60,6 +63,15 @@ export default function Home() {
         setSavedStories([]);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
   useEffect(() => {
@@ -132,6 +144,9 @@ export default function Home() {
       setTitle(data.title || "今晚的小故事");
       setStory(data.story || "");
       setStoryTip(data.storyTip || "");
+      if (isMobile) {
+        setActiveMobileTab("story");
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setError("网络开小差了，请稍后再试。");
@@ -272,6 +287,9 @@ export default function Home() {
     setStory(item.story);
     setStoryTip(item.storyTip || "");
     setError("");
+    if (isMobile) {
+      setActiveMobileTab("story");
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -305,7 +323,54 @@ export default function Home() {
           </div>
         </div>
 
-        <section className="mb-4 rounded-[24px] bg-white p-4 shadow-sm">
+        {/* Mobile tabs (reduce scroll) */}
+        <div className="sticky top-0 z-10 -mx-3 mb-4 bg-[#f7f7f7]/90 px-3 py-2 backdrop-blur sm:hidden">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white p-2 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveMobileTab("custom")}
+              className={[
+                "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                activeMobileTab === "custom"
+                  ? "bg-orange-400 text-white"
+                  : "bg-white text-gray-600",
+              ].join(" ")}
+            >
+              定制
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMobileTab("story")}
+              className={[
+                "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                activeMobileTab === "story"
+                  ? "bg-orange-400 text-white"
+                  : "bg-white text-gray-600",
+              ].join(" ")}
+            >
+              故事
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMobileTab("favorites")}
+              className={[
+                "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                activeMobileTab === "favorites"
+                  ? "bg-orange-400 text-white"
+                  : "bg-white text-gray-600",
+              ].join(" ")}
+            >
+              收藏
+            </button>
+          </div>
+        </div>
+
+        <section
+          className={[
+            "mb-4 rounded-[24px] bg-white p-4 shadow-sm",
+            activeMobileTab !== "custom" ? "hidden sm:block" : "",
+          ].join(" ")}
+        >
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">定制今晚的故事</h2>
             <button
@@ -409,7 +474,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mb-4 rounded-[24px] bg-white p-4 shadow-sm">
+        <section
+          className={[
+            "mb-4 rounded-[24px] bg-white p-4 shadow-sm",
+            activeMobileTab !== "story" ? "hidden sm:block" : "",
+          ].join(" ")}
+        >
           {!story ? (
             <div className="rounded-[20px] bg-[#fff7ed] px-4 py-10 text-center">
               <div className="mb-3 text-4xl">🌙</div>
@@ -417,6 +487,13 @@ export default function Home() {
               <p className="mt-2 text-sm leading-6 text-gray-500">
                 先输入几个关键词，MoonStory 会帮你准备一篇适合睡前讲给孩子听的故事。
               </p>
+              <button
+                type="button"
+                onClick={() => setActiveMobileTab("custom")}
+                className="mt-4 rounded-full bg-white px-4 py-2 text-sm font-medium text-orange-600 shadow-sm sm:hidden"
+              >
+                去定制并生成 →
+              </button>
             </div>
           ) : (
             <>
@@ -442,6 +519,39 @@ export default function Home() {
                 </div>
               )}
 
+              {/* Mobile: collapsible advice to reduce scroll */}
+              <div className="mt-3 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowAdviceOnMobile((v) => !v)}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-semibold text-gray-800"
+                >
+                  家长使用建议 {showAdviceOnMobile ? "▲" : "▼"}
+                </button>
+                {showAdviceOnMobile && (
+                  <div className="mt-2 space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+                    <div className="rounded-2xl bg-[#fafafa] p-4">
+                      <p className="text-sm font-semibold text-orange-500">讲之前</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-600">
+                        可以先问孩子：“今晚你想听森林里的故事，还是月亮下的故事？”
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#fafafa] p-4">
+                      <p className="text-sm font-semibold text-orange-500">讲的时候</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-600">
+                        读到对话时稍微放慢一点，孩子更容易沉浸进去，也更愿意接着听。
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#fafafa] p-4">
+                      <p className="text-sm font-semibold text-orange-500">讲完后</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-600">
+                        如果孩子很喜欢这组角色，第二天直接继续下一集，慢慢形成固定的睡前仪式。
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-3 rounded-[20px] bg-purple-50 p-4">
                 <p className="text-sm font-semibold text-purple-600">孩子喜欢这篇故事？</p>
                 <p className="mt-2 text-sm leading-6 text-gray-600">
@@ -459,7 +569,8 @@ export default function Home() {
           )}
         </section>
 
-        <section className="mb-4 rounded-[24px] bg-white p-4 shadow-sm">
+        {/* Desktop: advice stays as a full section */}
+        <section className="mb-4 hidden rounded-[24px] bg-white p-4 shadow-sm sm:block">
           <h3 className="mb-3 text-lg font-semibold text-gray-800">家长使用建议</h3>
           <div className="space-y-3">
             <div className="rounded-2xl bg-[#fafafa] p-4">
@@ -483,7 +594,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rounded-[24px] bg-white p-4 shadow-sm">
+        <section
+          className={[
+            "rounded-[24px] bg-white p-4 shadow-sm",
+            activeMobileTab !== "favorites" ? "hidden sm:block" : "",
+          ].join(" ")}
+        >
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800">我的收藏</h3>
             <span className="text-xs text-gray-400">{savedStories.length} 个故事</span>
