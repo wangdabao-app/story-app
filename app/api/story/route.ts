@@ -6,6 +6,48 @@ const client = new OpenAI({
   baseURL: "https://api.deepseek.com",
 });
 
+// 简单防刷：同一 IP 在时间窗内请求次数限制
+type Bucket = {
+  count: number;
+  resetAt: number;
+};
+
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 分钟
+const RATE_LIMIT_MAX_REQUESTS = 20; // 每分钟 20 次
+const buckets = new Map<string, Bucket>();
+
+function getClientKey(req: Request): string {
+  const header =
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("x-vercel-forwarded-for") ||
+    "";
+
+  const ip = header.split(",")[0]?.trim();
+
+  // 可以根据需要拼上 user-agent，区分一些简单脚本
+  const ua = req.headers.get("user-agent") || "";
+
+  return `${ip || "unknown"}|${ua.slice(0, 40)}`;
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    buckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  if (bucket.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  }
+
+  bucket.count += 1;
+  return false;
+}
+
 function safeParseJson(raw: string) {
   if (!raw) return null;
 
@@ -33,6 +75,18 @@ function safeParseJson(raw: string) {
 
 export async function POST(req: Request) {
   try {
+    const key = getClientKey(req);
+
+    if (isRateLimited(key)) {
+      return NextResponse.json(
+        {
+          error:
+            "请求有点频繁，请稍等一会儿再试。如果这是你的正式接入场景，欢迎联系作者升级为稳定版。",
+        },
+        { status: 429 }
+      );
+    }
+
     const {
       childName,
       char1,
