@@ -88,11 +88,24 @@ export default function Home() {
     setError("");
   };
 
-  const generateStory = async () => {
+  type StoryApiPayload = {
+    childName: string;
+    char1: string;
+    char2: string;
+    relation: string;
+    scene: string;
+    theme: string;
+    length: string;
+    previousStory: string;
+    previousTitle: string;
+    continueStory: boolean;
+  };
+
+  const requestStory = async (payload: StoryApiPayload, errorPrefix: string) => {
     setError("");
     setStoryTip("");
 
-    if (!char1 || !char2 || !relation || !scene || !theme) {
+    if (!payload.char1 || !payload.char2 || !payload.relation || !payload.scene || !payload.theme) {
       setError("请先把人物、关系、场景和主题填写完整。");
       return;
     }
@@ -106,24 +119,13 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          childName,
-          char1,
-          char2,
-          relation,
-          scene,
-          theme,
-          length,
-          previousStory: "",
-          previousTitle: "",
-          continueStory: false,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "故事生成失败，请稍后再试。");
+        setError(data.error || `${errorPrefix}失败，请稍后再试。`);
         return;
       }
 
@@ -138,53 +140,45 @@ export default function Home() {
     }
   };
 
-  const generateNextStory = async () => {
-    setError("");
+  const generateStory = async () => {
+    await requestStory(
+      {
+        childName,
+        char1,
+        char2,
+        relation,
+        scene,
+        theme,
+        length,
+        previousStory: "",
+        previousTitle: "",
+        continueStory: false,
+      },
+      "故事生成",
+    );
+  };
 
+  const generateNextStory = async () => {
     if (!story) {
       setError("请先生成一个故事，再继续下一集。");
       return;
     }
 
-    try {
-      setLoading(true);
-      stopReading();
-
-      const res = await fetch("/api/story", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          childName,
-          char1,
-          char2,
-          relation,
-          scene,
-          theme,
-          length,
-          previousStory: story,
-          previousTitle: title,
-          continueStory: true,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "下一集生成失败，请稍后再试。");
-        return;
-      }
-
-      setTitle(data.title || "新的故事");
-      setStory(data.story || "");
-      setStoryTip(data.storyTip || "");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
-      setError("网络开小差了，请稍后再试。");
-    } finally {
-      setLoading(false);
-    }
+    await requestStory(
+      {
+        childName,
+        char1,
+        char2,
+        relation,
+        scene,
+        theme,
+        length,
+        previousStory: story,
+        previousTitle: title,
+        continueStory: true,
+      },
+      "下一集生成",
+    );
   };
 
   const readStory = () => {
@@ -235,6 +229,34 @@ export default function Home() {
     };
 
     setSavedStories((prev) => [newItem, ...prev]);
+  };
+
+  const generateFromSavedStory = async (item: SavedStory) => {
+    stopReading();
+    setChildName(item.childName);
+    setChar1(item.char1);
+    setChar2(item.char2);
+    setRelation(item.relation);
+    setScene(item.scene);
+    setTheme(item.theme);
+    setLength(item.length);
+    setError("");
+
+    await requestStory(
+      {
+        childName: item.childName,
+        char1: item.char1,
+        char2: item.char2,
+        relation: item.relation,
+        scene: item.scene,
+        theme: item.theme,
+        length: item.length,
+        previousStory: "",
+        previousTitle: "",
+        continueStory: false,
+      },
+      "故事生成",
+    );
   };
 
   const loadSavedStory = (item: SavedStory) => {
@@ -376,13 +398,9 @@ export default function Home() {
               >
                 停止
               </button>
-              <button
-                onClick={saveCurrentStory}
-                disabled={!story}
-                className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
-              >
-                ⭐ 收藏
-              </button>
+              <div className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-center text-sm font-medium text-gray-400">
+                收藏在故事卡片里
+              </div>
             </div>
           </div>
         </section>
@@ -399,7 +417,16 @@ export default function Home() {
           ) : (
             <>
               <div className="rounded-[20px] bg-[#fff7ed] p-4">
-                <p className="mb-2 text-xs font-medium text-orange-500">今晚的睡前故事</p>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium text-orange-500">今晚的睡前故事</p>
+                  <button
+                    onClick={saveCurrentStory}
+                    disabled={!story}
+                    className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600 shadow-sm disabled:opacity-50"
+                  >
+                    ⭐ 收藏这篇
+                  </button>
+                </div>
                 <h2 className="mb-4 text-2xl font-bold leading-tight text-orange-600">{title}</h2>
                 <div className="whitespace-pre-line text-[17px] leading-8 text-gray-700">{story}</div>
               </div>
@@ -472,12 +499,19 @@ export default function Home() {
                   </p>
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">{item.story}</p>
 
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="mt-3 grid grid-cols-3 gap-2">
                     <button
                       onClick={() => loadSavedStory(item)}
                       className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-orange-500"
                     >
                       查看
+                    </button>
+                    <button
+                      onClick={() => generateFromSavedStory(item)}
+                      disabled={loading}
+                      className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-purple-600 disabled:opacity-50"
+                    >
+                      再生成
                     </button>
                     <button
                       onClick={() => deleteSavedStory(item.id)}
