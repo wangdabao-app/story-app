@@ -585,7 +585,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="mt-3 text-sm leading-6 text-white/90">
-            帮家长根据孩子喜好 30 秒定制睡前故事，讲故事更轻松，孩子更容易听进去。
+            根据孩子的喜好，30 秒生成专属睡前故事。家长轻松讲，孩子安心听。
           </p>
         </div>
 
