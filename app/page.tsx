@@ -504,7 +504,7 @@ export default function Home() {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
-        showToast("已复制分享文案，可以粘贴到微信里");
+        showToast("已复制分享，可以粘贴到微信里");
       } else {
         // 旧浏览器降级方案
         const textarea = document.createElement("textarea");
@@ -515,7 +515,7 @@ export default function Home() {
         textarea.select();
         document.execCommand("copy");
         document.body.removeChild(textarea);
-        showToast("已复制分享文案，可以粘贴到微信里");
+        showToast("已复制分享，可以粘贴到微信里");
       }
     } catch {
       showToast("复制失败，可以手动全选复制");
@@ -578,9 +578,9 @@ export default function Home() {
     <main className="min-h-screen bg-[#f7f7f7]">
       <div className="mx-auto max-w-md px-3 pb-28 pt-4 sm:max-w-2xl sm:px-6 sm:pb-8">
         <div className="mb-4 rounded-[28px] bg-gradient-to-br from-orange-400 to-amber-300 px-5 py-6 text-white shadow-sm">
-          <h1 className="mt-1 text-3xl font-bold">
-            MoonStory
-            <span className="ml-2 align-middle text-base font-semibold tracking-wide">
+          <h1 className="mt-1 whitespace-nowrap text-2xl font-bold sm:text-3xl">
+            <span className="align-middle">MoonStory</span>
+            <span className="ml-2 align-middle text-sm font-semibold tracking-wide sm:text-base">
               – AI睡前故事助手
             </span>
           </h1>
@@ -788,7 +788,7 @@ export default function Home() {
                       disabled={!story}
                       className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600/90 shadow-sm disabled:opacity-50"
                     >
-                      复制分享文案
+                      复制分享
                     </button>
                     <button
                       type="button"
