@@ -482,6 +482,46 @@ export default function Home() {
     window.setTimeout(() => setSaving(false), 600);
   };
 
+  const copyShareText = async () => {
+    if (!story) return;
+
+    const origin =
+      (typeof window !== "undefined" && window.location.origin) || "https://example.com";
+    const url = `${origin}`;
+
+    const preview =
+      story.length > 120 ? `${story.slice(0, 120).trim()}…` : story.trim();
+
+    const text = [
+      title || "今晚的小故事",
+      "",
+      preview,
+      "",
+      "—— 来自 MoonStory · AI睡前故事助手",
+      url,
+    ].join("\n");
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        showToast("已复制分享文案，可以粘贴到微信里");
+      } else {
+        // 旧浏览器降级方案
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        showToast("已复制分享文案，可以粘贴到微信里");
+      }
+    } catch {
+      showToast("复制失败，可以手动全选复制");
+    }
+  };
+
   const continueFromSavedStory = async (item: SavedStory) => {
     stopReading();
     setChildName(item.childName);
@@ -741,13 +781,24 @@ export default function Home() {
               <div className="rounded-[20px] bg-[#fff7ed] p-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <p className="text-xs font-medium text-orange-500">今晚的睡前故事</p>
-                  <button
-                    onClick={saveCurrentStory}
-                    disabled={!story || isCurrentStorySaved}
-                    className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600 shadow-sm disabled:opacity-50"
-                  >
-                    {isCurrentStorySaved ? "已收藏" : "⭐ 收藏"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={copyShareText}
+                      disabled={!story}
+                      className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600/90 shadow-sm disabled:opacity-50"
+                    >
+                      复制分享文案
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveCurrentStory}
+                      disabled={!story || isCurrentStorySaved}
+                      className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600 shadow-sm disabled:opacity-50"
+                    >
+                      {isCurrentStorySaved ? "已收藏" : "⭐ 收藏"}
+                    </button>
+                  </div>
                 </div>
                 <h2 className="mb-4 text-2xl font-bold leading-tight text-orange-600">{title}</h2>
                 <div className="text-[17px] leading-8 text-gray-700">
