@@ -258,279 +258,239 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-yellow-50">
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="mb-5 text-center sm:mb-8">
-          <p className="mb-2 text-xs font-medium tracking-wide text-orange-500 sm:text-sm">
-            专为家长设计的睡前故事工具
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight text-orange-600 sm:text-4xl">MoonStory</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-            AI睡前故事助手 · 帮家长快速定制今晚的故事，让讲故事变得更轻松。
+    <main className="min-h-screen bg-[#f7f7f7]">
+      <div className="mx-auto max-w-md px-3 pb-8 pt-4 sm:max-w-2xl sm:px-6">
+        <div className="mb-4 rounded-[28px] bg-gradient-to-br from-orange-400 to-amber-300 px-5 py-6 text-white shadow-sm">
+          <p className="text-xs opacity-90">AI睡前故事助手</p>
+          <h1 className="mt-1 text-3xl font-bold">MoonStory</h1>
+          <p className="mt-2 text-sm leading-6 text-white/90">
+            帮家长快速定制今晚的故事，讲故事更轻松，孩子更容易听进去。
           </p>
         </div>
 
-        <div className="mb-5 grid gap-3 sm:mb-8 sm:gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-semibold text-orange-500">1. 定制故事</p>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              输入人物、关系、场景和主题，快速生成一篇适合睡前讲给孩子听的故事。
-            </p>
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <div className="rounded-2xl bg-white p-3 text-center shadow-sm">
+            <p className="text-xs text-orange-500">步骤1</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">填几个关键词</p>
           </div>
-          <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-semibold text-orange-500">2. 直接讲给孩子听</p>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              故事更像家长讲述稿，还会附带提示，帮助你更自然地讲出来。
-            </p>
+          <div className="rounded-2xl bg-white p-3 text-center shadow-sm">
+            <p className="text-xs text-orange-500">步骤2</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">生成故事稿</p>
           </div>
-          <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-semibold text-orange-500">3. 喜欢就继续下一集</p>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              如果孩子喜欢这组角色，可以继续生成下一集，把一次故事变成连续故事。
-            </p>
+          <div className="rounded-2xl bg-white p-3 text-center shadow-sm">
+            <p className="text-xs text-orange-500">步骤3</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">喜欢就继续下一集</p>
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-          <section className="rounded-3xl border border-orange-100 bg-white/90 p-4 shadow-sm sm:p-6">
-            <h2 className="mb-4 text-lg font-semibold text-gray-800 sm:text-xl">定制今晚的故事</h2>
+        <section className="mb-4 rounded-[24px] bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-800">定制今晚的故事</h2>
+            <button
+              onClick={fillRandomStoryInputs}
+              className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-500"
+            >
+              🎲 随机
+            </button>
+          </div>
 
-            <div className="space-y-3">
-              <input
-                value={childName}
-                onChange={(e) => setChildName(e.target.value)}
-                placeholder="孩子名字（可选）"
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              />
+          <div className="space-y-3">
+            <input
+              value={childName}
+              onChange={(e) => setChildName(e.target.value)}
+              placeholder="孩子名字（可选）"
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            />
+            <input
+              value={char1}
+              onChange={(e) => setChar1(e.target.value)}
+              placeholder="人物1（例如：豆豆小熊）"
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            />
+            <input
+              value={char2}
+              onChange={(e) => setChar2(e.target.value)}
+              placeholder="人物2（例如：星星萤火虫）"
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            />
+            <input
+              value={relation}
+              onChange={(e) => setRelation(e.target.value)}
+              placeholder="人物关系（例如：好朋友）"
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            />
+            <input
+              value={scene}
+              onChange={(e) => setScene(e.target.value)}
+              placeholder="故事场景（例如：森林小屋）"
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            />
+            <input
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              placeholder="故事主题（例如：不怕黑）"
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            />
+            <select
+              value={length}
+              onChange={(e) => setLength(e.target.value)}
+              className="w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-base outline-none focus:border-orange-300"
+            >
+              <option>短故事（3分钟）</option>
+              <option>标准（5分钟）</option>
+              <option>长故事（8分钟）</option>
+            </select>
+          </div>
 
-              <input
-                value={char1}
-                onChange={(e) => setChar1(e.target.value)}
-                placeholder="人物1（例如：豆豆小熊）"
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              />
+          {error && <div className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-500">{error}</div>}
 
-              <input
-                value={char2}
-                onChange={(e) => setChar2(e.target.value)}
-                placeholder="人物2（例如：星星萤火虫）"
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              />
+          <div className="mt-4 space-y-3">
+            <button
+              onClick={generateStory}
+              disabled={!canGenerate}
+              className="w-full rounded-2xl bg-orange-400 px-4 py-3.5 text-base font-medium text-white disabled:opacity-50"
+            >
+              {loading ? "生成中..." : "生成今晚的故事"}
+            </button>
 
-              <input
-                value={relation}
-                onChange={(e) => setRelation(e.target.value)}
-                placeholder="人物关系（例如：好朋友）"
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              />
+            <button
+              onClick={generateNextStory}
+              disabled={!story || loading}
+              className="w-full rounded-2xl bg-purple-500 px-4 py-3.5 text-base font-medium text-white disabled:opacity-50"
+            >
+              📚 继续下一集
+            </button>
 
-              <input
-                value={scene}
-                onChange={(e) => setScene(e.target.value)}
-                placeholder="故事场景（例如：森林小屋）"
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              />
-
-              <input
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                placeholder="故事主题（例如：不怕黑）"
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              />
-
-              <select
-                value={length}
-                onChange={(e) => setLength(e.target.value)}
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base outline-none transition focus:border-orange-400"
-              >
-                <option>短故事（3分钟）</option>
-                <option>标准（5分钟）</option>
-                <option>长故事（8分钟）</option>
-              </select>
-            </div>
-
-            {error && <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-500">{error}</div>}
-
-            <div className="mt-5 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={generateStory}
-                disabled={!canGenerate}
-                className="w-full rounded-2xl bg-orange-400 px-4 py-3.5 text-base font-medium text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={readStory}
+                disabled={!story || isSpeaking}
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
-                {loading ? "生成中..." : "生成今晚的故事"}
+                🔊 朗读
               </button>
-
               <button
-                onClick={fillRandomStoryInputs}
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base font-medium text-orange-500 transition hover:bg-orange-50"
+                onClick={stopReading}
+                disabled={!isSpeaking}
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
-                🎲 随机生成一个故事
+                停止
               </button>
-
-              <button
-                onClick={generateNextStory}
-                disabled={!story || loading}
-                className="w-full rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3.5 text-base font-medium text-purple-600 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                📚 继续下一集
-              </button>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={readStory}
-                  disabled={!story || isSpeaking}
-                  className="rounded-2xl border border-orange-200 bg-white px-3 py-3.5 text-sm font-medium text-orange-500 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
-                >
-                  🔊 朗读
-                </button>
-
-                <button
-                  onClick={stopReading}
-                  disabled={!isSpeaking}
-                  className="rounded-2xl border border-orange-200 bg-white px-3 py-3.5 text-sm font-medium text-orange-500 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
-                >
-                  停止
-                </button>
-              </div>
-
               <button
                 onClick={saveCurrentStory}
                 disabled={!story}
-                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-base font-medium text-orange-500 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
-                ⭐ 收藏这个故事
+                ⭐ 收藏
               </button>
             </div>
+          </div>
+        </section>
 
-            <div className="mt-5 rounded-2xl bg-orange-50 p-4 text-sm leading-6 text-gray-600">
-              <p className="font-medium text-orange-600">建议输入示例</p>
-              <p className="mt-2">孩子名字：小米</p>
-              <p>人物1：豆豆小熊</p>
-              <p>人物2：星星萤火虫</p>
-              <p>关系：好朋友</p>
-              <p>场景：森林小屋</p>
-              <p>主题：不怕黑</p>
+        <section className="mb-4 rounded-[24px] bg-white p-4 shadow-sm">
+          {!story ? (
+            <div className="rounded-[20px] bg-[#fff7ed] px-4 py-10 text-center">
+              <div className="mb-3 text-4xl">🌙</div>
+              <p className="text-base font-medium text-gray-700">今晚的故事还没开始</p>
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                先输入几个关键词，MoonStory 会帮你准备一篇适合睡前讲给孩子听的故事。
+              </p>
             </div>
-          </section>
+          ) : (
+            <>
+              <div className="rounded-[20px] bg-[#fff7ed] p-4">
+                <p className="mb-2 text-xs font-medium text-orange-500">今晚的睡前故事</p>
+                <h2 className="mb-4 text-2xl font-bold leading-tight text-orange-600">{title}</h2>
+                <div className="whitespace-pre-line text-[17px] leading-8 text-gray-700">{story}</div>
+              </div>
 
-          <section className="space-y-5">
-            <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm sm:p-6 md:p-8">
-              {!story ? (
-                <div className="flex min-h-[280px] items-center justify-center rounded-[24px] bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center text-gray-500 sm:min-h-[380px]">
-                  <div>
-                    <div className="mb-4 text-4xl sm:text-5xl">🌙</div>
-                    <p className="text-base font-medium text-gray-700 sm:text-lg">今晚的故事还没开始</p>
-                    <p className="mt-2 text-sm leading-6 text-gray-500 sm:text-base">
-                      输入几个关键词，MoonStory 会帮你准备一篇适合睡前讲给孩子听的温柔故事。
-                    </p>
-                  </div>
+              {storyTip && (
+                <div className="mt-3 rounded-[20px] bg-orange-50 p-4">
+                  <p className="mb-2 text-sm font-semibold text-orange-500">讲故事小提示</p>
+                  <p className="whitespace-pre-line text-sm leading-7 text-gray-600">{storyTip}</p>
                 </div>
-              ) : (
-                <div className="rounded-[24px] bg-gradient-to-br from-amber-50 to-yellow-50 p-4 sm:p-6">
-                  <p className="mb-2 text-xs font-medium text-orange-500 sm:text-sm">今晚的睡前故事</p>
-                  <h2 className="mb-4 text-2xl font-bold leading-tight text-orange-600 sm:mb-5 sm:text-3xl">
-                    {title}
-                  </h2>
-                  <div className="whitespace-pre-line text-[17px] leading-8 text-gray-700 sm:text-[18px] sm:leading-9">
-                    {story}
-                  </div>
+              )}
 
-                  {storyTip && (
-                    <div className="mt-5 rounded-2xl bg-white/80 p-4">
-                      <p className="mb-2 text-sm font-semibold text-orange-500">讲故事小提示</p>
-                      <p className="whitespace-pre-line text-sm leading-7 text-gray-600">{storyTip}</p>
-                    </div>
-                  )}
+              <div className="mt-3 rounded-[20px] bg-purple-50 p-4">
+                <p className="text-sm font-semibold text-purple-600">孩子喜欢这篇故事？</p>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  可以直接继续下一集，沿用同样角色，把一个故事讲成一个连续系列。
+                </p>
+                <button
+                  onClick={generateNextStory}
+                  disabled={loading}
+                  className="mt-3 w-full rounded-2xl bg-purple-500 px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  📚 继续这个故事
+                </button>
+              </div>
+            </>
+          )}
+        </section>
 
-                  <div className="mt-5 rounded-2xl border border-purple-200 bg-purple-50 p-4">
-                    <p className="text-sm font-semibold text-purple-600">孩子喜欢这篇故事？</p>
-                    <p className="mt-2 text-sm leading-6 text-gray-600">
-                      可以直接继续下一集，沿用同样的角色和设定，把睡前故事讲成一个连续系列。
-                    </p>
+        <section className="mb-4 rounded-[24px] bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-gray-800">家长使用建议</h3>
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-[#fafafa] p-4">
+              <p className="text-sm font-semibold text-orange-500">讲之前</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                可以先问孩子：“今晚你想听森林里的故事，还是月亮下的故事？”
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#fafafa] p-4">
+              <p className="text-sm font-semibold text-orange-500">讲的时候</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                读到对话时稍微放慢一点，孩子更容易沉浸进去，也更愿意接着听。
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#fafafa] p-4">
+              <p className="text-sm font-semibold text-orange-500">讲完后</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                如果孩子很喜欢这组角色，第二天直接继续下一集，慢慢形成固定的睡前仪式。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[24px] bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800">我的收藏</h3>
+            <span className="text-xs text-gray-400">{savedStories.length} 个故事</span>
+          </div>
+
+          {savedStories.length === 0 ? (
+            <div className="rounded-2xl bg-[#fafafa] px-4 py-8 text-center text-sm text-gray-500">
+              还没有收藏故事，先生成一个试试吧。
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {savedStories.map((item) => (
+                <div key={item.id} className="rounded-2xl bg-[#fafafa] p-4">
+                  <h4 className="text-base font-semibold text-orange-600">{item.title}</h4>
+                  <p className="mt-1 text-xs text-gray-500">
+                    主题：{item.theme} · {formatTime(item.createdAt)}
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">{item.story}</p>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
                     <button
-                      onClick={generateNextStory}
-                      disabled={loading}
-                      className="mt-3 w-full rounded-xl bg-purple-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                      onClick={() => loadSavedStory(item)}
+                      className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-orange-500"
                     >
-                      📚 继续这个故事
+                      查看
+                    </button>
+                    <button
+                      onClick={() => deleteSavedStory(item.id)}
+                      className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-red-500"
+                    >
+                      删除
                     </button>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
-
-            <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm sm:p-6">
-              <h3 className="mb-4 text-lg font-semibold text-gray-800 sm:text-xl">家长使用建议</h3>
-              <div className="grid gap-3 md:grid-cols-3 md:gap-4">
-                <div className="rounded-2xl bg-orange-50 p-4">
-                  <p className="text-sm font-semibold text-orange-500">讲之前</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    可以先问孩子：“今晚你想听森林里的故事，还是月亮下的故事？”
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-orange-50 p-4">
-                  <p className="text-sm font-semibold text-orange-500">讲的时候</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    读到对话时稍微放慢一点，孩子会更容易沉浸进去，也更愿意听下去。
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-orange-50 p-4">
-                  <p className="text-sm font-semibold text-orange-500">讲完后</p>
-                  <p className="mt-2 text-sm leading-6 text-gray-600">
-                    如果孩子很喜欢这组角色，第二天可以继续下一集，形成固定的睡前仪式感。
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 sm:text-xl">我的收藏</h3>
-                <span className="text-xs text-gray-400 sm:text-sm">{savedStories.length} 个故事</span>
-              </div>
-
-              {savedStories.length === 0 ? (
-                <div className="rounded-2xl bg-gray-50 px-4 py-8 text-center text-sm text-gray-500 sm:text-base">
-                  还没有收藏故事，先生成一个试试吧。
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {savedStories.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-2xl border border-orange-100 bg-orange-50/50 p-4"
-                    >
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="text-base font-semibold text-orange-600 sm:text-lg">{item.title}</h4>
-                          <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                            主题：{item.theme} · {formatTime(item.createdAt)}
-                          </p>
-                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">{item.story}</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => loadSavedStory(item)}
-                            className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-orange-500 shadow-sm transition hover:bg-orange-100"
-                          >
-                            查看
-                          </button>
-                          <button
-                            onClick={() => deleteSavedStory(item.id)}
-                            className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-red-500 shadow-sm transition hover:bg-red-50"
-                          >
-                            删除
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
+          )}
+        </section>
       </div>
     </main>
   );

@@ -6,6 +6,31 @@ const client = new OpenAI({
   baseURL: "https://api.deepseek.com",
 });
 
+function safeParseJson(raw: string) {
+  if (!raw) return null;
+
+  let text = raw.trim();
+
+  // 去掉 markdown 代码块
+  text = text.replace(/^```json\s*/i, "");
+  text = text.replace(/^```\s*/i, "");
+  text = text.replace(/\s*```$/i, "");
+
+  // 如果前后有多余文字，尝试截取第一个完整 JSON 对象
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    text = text.slice(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -80,8 +105,9 @@ ${previousStory}
 10. 结尾要有明显助眠感。
 11. 另外再给一段“讲故事小提示”，是给家长的，比如可以停顿哪里、可以问孩子什么问题。
 12. 如果是连续故事，标题要明显像“下一集”，但不要直接写“第2集”也可以，用自然的方式延续。
+13. 只返回 JSON，不要加 markdown，不要加解释，不要加前言后语。
 
-请严格返回 JSON，不要加 markdown，不要加解释，格式如下：
+返回格式必须严格是：
 {
   "title": "故事标题",
   "story": "故事正文",
@@ -101,12 +127,9 @@ ${previousStory}
     });
 
     const content = response.choices[0]?.message?.content || "";
+    const parsed = safeParseJson(content);
 
-    let parsed: { title?: string; story?: string; storyTip?: string } = {};
-
-    try {
-      parsed = JSON.parse(content);
-    } catch {
+    if (!parsed) {
       return NextResponse.json(
         { error: "模型返回格式不正确，请再试一次。" },
         { status: 500 }
