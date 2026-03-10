@@ -53,6 +53,8 @@ export default function Home() {
   const [activeMobileTab, setActiveMobileTab] = useState<"custom" | "story" | "favorites">("custom");
   const [isMobile, setIsMobile] = useState(false);
   const [showAdviceOnMobile, setShowAdviceOnMobile] = useState(false);
+  const [toast, setToast] = useState<{ message: string; id: number } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("moonstory-saved-stories");
@@ -85,6 +87,14 @@ export default function Home() {
       }
     };
   }, []);
+
+  const showToast = (message: string) => {
+    const id = Date.now();
+    setToast({ message, id });
+    window.setTimeout(() => {
+      setToast((t) => (t?.id === id ? null : t));
+    }, 1800);
+  };
 
   const canGenerate = useMemo(() => {
     return char1 && char2 && relation && scene && theme && !loading;
@@ -138,6 +148,7 @@ export default function Home() {
 
       if (!res.ok) {
         setError(data.error || `${errorPrefix}失败，请稍后再试。`);
+        showToast(data.error || `${errorPrefix}失败`);
         return;
       }
 
@@ -147,9 +158,11 @@ export default function Home() {
       if (isMobile) {
         setActiveMobileTab("story");
       }
+      showToast(payload.continueStory ? "下一集已生成" : "故事已生成");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setError("网络开小差了，请稍后再试。");
+      showToast("网络开小差了");
     } finally {
       setLoading(false);
     }
@@ -216,6 +229,7 @@ export default function Home() {
 
     window.speechSynthesis.speak(utterance);
     setIsSpeaking(true);
+    showToast("开始朗读");
   };
 
   const stopReading = () => {
@@ -223,10 +237,12 @@ export default function Home() {
       window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
+    showToast("已停止朗读");
   };
 
   const saveCurrentStory = () => {
     if (!story) return;
+    if (saving) return;
 
     const newItem: SavedStory = {
       id: crypto.randomUUID(),
@@ -243,7 +259,18 @@ export default function Home() {
       createdAt: new Date().toISOString(),
     };
 
-    setSavedStories((prev) => [newItem, ...prev]);
+    setSaving(true);
+    setSavedStories((prev) => {
+      const exists = prev.some((s) => s.story.trim() === story.trim());
+      if (exists) {
+        showToast("已收藏，不重复添加");
+        return prev;
+      }
+      showToast("已收藏");
+      return [newItem, ...prev];
+    });
+
+    window.setTimeout(() => setSaving(false), 600);
   };
 
   const continueFromSavedStory = async (item: SavedStory) => {
@@ -375,7 +402,7 @@ export default function Home() {
             <h2 className="text-lg font-semibold text-gray-800">定制今晚的故事</h2>
             <button
               onClick={fillRandomStoryInputs}
-              className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-500"
+              className="rounded-full bg-orange-50 px-3.5 py-2 text-sm font-semibold text-orange-500"
             >
               🎲 随机
             </button>
@@ -649,44 +676,47 @@ export default function Home() {
         {/* Mobile: bottom action bar (single-hand friendly) */}
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:hidden">
           <div className="mx-auto max-w-md">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => (isSpeaking ? stopReading() : readStory())}
+                onClick={readStory}
                 disabled={!story}
                 className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
               >
-                {isSpeaking ? "停止" : "朗读"}
+                朗读
               </button>
               <button
                 type="button"
-                onClick={saveCurrentStory}
-                disabled={!story}
+                onClick={stopReading}
+                disabled={!isSpeaking}
                 className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
               >
-                收藏
-              </button>
-              <button
-                type="button"
-                onClick={generateNextStory}
-                disabled={!story || loading}
-                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-purple-700 disabled:opacity-50"
-              >
-                下一集
+                停止
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  setActiveMobileTab("custom");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  if (!story) return;
+                  showToast("正在生成下一集…");
+                  void generateNextStory();
                 }}
-                className="whitespace-nowrap rounded-2xl bg-orange-400 px-2 py-3 text-xs font-semibold text-white"
+                disabled={!story || loading}
+                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-purple-700 disabled:opacity-50"
               >
-                去生成
+                继续生成
               </button>
             </div>
           </div>
         </div>
+
+        {/* Toast */}
+        {toast && (
+          <div className="fixed inset-x-0 bottom-24 z-30 flex justify-center px-3 sm:hidden">
+            <div className="rounded-full bg-gray-900/90 px-4 py-2 text-xs font-medium text-white shadow-lg">
+              {toast.message}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
