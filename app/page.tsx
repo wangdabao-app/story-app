@@ -231,7 +231,7 @@ export default function Home() {
     setSavedStories((prev) => [newItem, ...prev]);
   };
 
-  const generateFromSavedStory = async (item: SavedStory) => {
+  const continueFromSavedStory = async (item: SavedStory) => {
     stopReading();
     setChildName(item.childName);
     setChar1(item.char1);
@@ -251,11 +251,11 @@ export default function Home() {
         scene: item.scene,
         theme: item.theme,
         length: item.length,
-        previousStory: "",
-        previousTitle: "",
-        continueStory: false,
+        previousStory: item.story,
+        previousTitle: item.title,
+        continueStory: true,
       },
-      "故事生成",
+      "下一集生成",
     );
   };
 
@@ -398,9 +398,13 @@ export default function Home() {
               >
                 停止
               </button>
-              <div className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-center text-sm font-medium text-gray-400">
-                收藏在故事卡片里
-              </div>
+              <button
+                onClick={saveCurrentStory}
+                disabled={!story}
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
+              >
+                ⭐ 收藏故事
+              </button>
             </div>
           </div>
         </section>
@@ -507,11 +511,11 @@ export default function Home() {
                       查看
                     </button>
                     <button
-                      onClick={() => generateFromSavedStory(item)}
+                      onClick={() => continueFromSavedStory(item)}
                       disabled={loading}
                       className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-purple-600 disabled:opacity-50"
                     >
-                      再生成
+                      继续下一集
                     </button>
                     <button
                       onClick={() => deleteSavedStory(item.id)}
