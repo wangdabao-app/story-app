@@ -6,11 +6,13 @@ type SavedStory = {
   id: string;
   title: string;
   story: string;
+  childName: string;
   char1: string;
   char2: string;
   relation: string;
   scene: string;
   theme: string;
+  length: string;
   createdAt: string;
 };
 
@@ -32,21 +34,24 @@ function formatTime(dateString: string) {
 }
 
 export default function Home() {
+  const [childName, setChildName] = useState("");
   const [char1, setChar1] = useState("");
   const [char2, setChar2] = useState("");
-  const [relation, setRelation] = useState("");
+  const [relation, setRelation] = useState("好朋友");
   const [scene, setScene] = useState("");
   const [theme, setTheme] = useState("");
+  const [length, setLength] = useState("标准（5分钟）");
 
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
+  const [storyTip, setStoryTip] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const raw = localStorage.getItem("saved-stories");
+    const raw = localStorage.getItem("moonstory-saved-stories");
     if (raw) {
       try {
         setSavedStories(JSON.parse(raw));
@@ -57,7 +62,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("saved-stories", JSON.stringify(savedStories));
+    localStorage.setItem("moonstory-saved-stories", JSON.stringify(savedStories));
   }, [savedStories]);
 
   useEffect(() => {
@@ -78,11 +83,13 @@ export default function Home() {
     setRelation(pickOne(randomRelations));
     setScene(pickOne(randomScenes));
     setTheme(pickOne(randomThemes));
+    setLength(pickOne(["短故事（3分钟）", "标准（5分钟）", "长故事（8分钟）"]));
     setError("");
   };
 
   const generateStory = async () => {
     setError("");
+    setStoryTip("");
 
     if (!char1 || !char2 || !relation || !scene || !theme) {
       setError("请先把人物、关系、场景和主题填写完整。");
@@ -99,11 +106,13 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          childName,
           char1,
           char2,
           relation,
           scene,
           theme,
+          length,
         }),
       });
 
@@ -116,6 +125,7 @@ export default function Home() {
 
       setTitle(data.title || "今晚的小故事");
       setStory(data.story || "");
+      setStoryTip(data.storyTip || "");
     } catch {
       setError("网络开小差了，请稍后再试。");
     } finally {
@@ -159,11 +169,13 @@ export default function Home() {
       id: crypto.randomUUID(),
       title: title || "今晚的小故事",
       story,
+      childName,
       char1,
       char2,
       relation,
       scene,
       theme,
+      length,
       createdAt: new Date().toISOString(),
     };
 
@@ -172,14 +184,17 @@ export default function Home() {
 
   const loadSavedStory = (item: SavedStory) => {
     stopReading();
+    setChildName(item.childName);
     setChar1(item.char1);
     setChar2(item.char2);
     setRelation(item.relation);
     setScene(item.scene);
     setTheme(item.theme);
+    setLength(item.length);
     setTitle(item.title);
     setStory(item.story);
     setError("");
+    setStoryTip("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -191,10 +206,10 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-yellow-50 px-4 py-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 text-center">
-          <p className="mb-2 text-sm text-orange-500">专为 3-6 岁孩子设计</p>
-          <h1 className="text-4xl font-bold tracking-tight text-orange-600">儿童睡前故事生成器</h1>
+          <p className="mb-2 text-sm text-orange-500">专为家长设计的睡前故事工具</p>
+          <h1 className="text-4xl font-bold tracking-tight text-orange-600">MoonStory</h1>
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">
-            输入人物、关系、场景和主题，一键生成温柔、适合睡前朗读的小故事。
+            AI睡前故事助手 · 帮家长轻松定制今晚的故事，让讲故事变得简单。
           </p>
         </div>
 
@@ -203,6 +218,13 @@ export default function Home() {
             <h2 className="mb-4 text-xl font-semibold text-gray-800">定制今晚的故事</h2>
 
             <div className="space-y-3">
+              <input
+                value={childName}
+                onChange={(e) => setChildName(e.target.value)}
+                placeholder="孩子名字（可选）"
+                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+
               <input
                 value={char1}
                 onChange={(e) => setChar1(e.target.value)}
@@ -237,6 +259,16 @@ export default function Home() {
                 placeholder="故事主题（例如：不怕黑）"
                 className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
               />
+
+              <select
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              >
+                <option>短故事（3分钟）</option>
+                <option>标准（5分钟）</option>
+                <option>长故事（8分钟）</option>
+              </select>
             </div>
 
             {error && <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-500">{error}</div>}
@@ -247,14 +279,14 @@ export default function Home() {
                 disabled={!canGenerate}
                 className="rounded-2xl bg-orange-400 px-4 py-3 font-medium text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? "生成中..." : "生成故事"}
+                {loading ? "生成中..." : "生成今晚的故事"}
               </button>
 
               <button
                 onClick={fillRandomStoryInputs}
                 className="rounded-2xl border border-orange-200 bg-white px-4 py-3 font-medium text-orange-500 transition hover:bg-orange-50"
               >
-                🎲 随机角色
+                🎲 随机生成一个故事
               </button>
 
               <div className="grid grid-cols-2 gap-3">
@@ -280,13 +312,14 @@ export default function Home() {
                 disabled={!story}
                 className="rounded-2xl border border-orange-200 bg-white px-4 py-3 font-medium text-orange-500 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                ⭐ 收藏故事
+                ⭐ 收藏这个故事
               </button>
             </div>
 
             <div className="mt-6 rounded-2xl bg-orange-50 p-4 text-sm text-gray-600">
               <p className="font-medium text-orange-600">建议输入示例</p>
-              <p className="mt-2">人物1：豆豆小熊</p>
+              <p className="mt-2">孩子名字：小米</p>
+              <p>人物1：豆豆小熊</p>
               <p>人物2：星星萤火虫</p>
               <p>关系：好朋友</p>
               <p>场景：森林小屋</p>
@@ -301,14 +334,23 @@ export default function Home() {
                   <div>
                     <div className="mb-4 text-5xl">🌙</div>
                     <p className="text-lg font-medium text-gray-700">今晚的故事还没开始</p>
-                    <p className="mt-2 text-sm text-gray-500">填写左侧内容，点击“生成故事”，就会出现一本温柔的小绘本。</p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      输入几个关键词，MoonStory 会帮你准备一篇适合睡前讲给孩子听的温柔故事。
+                    </p>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-[24px] bg-gradient-to-br from-amber-50 to-yellow-50 p-6">
                   <p className="mb-2 text-sm text-orange-500">今晚的睡前故事</p>
                   <h2 className="mb-5 text-3xl font-bold text-orange-600">{title}</h2>
-                  <div className="whitespace-pre-line leading-8 text-gray-700">{story}</div>
+                  <div className="whitespace-pre-line text-[18px] leading-9 text-gray-700">{story}</div>
+
+                  {storyTip && (
+                    <div className="mt-6 rounded-2xl bg-white/70 p-4">
+                      <p className="mb-2 text-sm font-semibold text-orange-500">讲故事小提示</p>
+                      <p className="whitespace-pre-line text-sm leading-7 text-gray-600">{storyTip}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

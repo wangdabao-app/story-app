@@ -8,7 +8,7 @@ const client = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { char1, char2, relation, scene, theme } = await req.json();
+    const { childName, char1, char2, relation, scene, theme, length } = await req.json();
 
     if (!char1 || !char2 || !relation || !scene || !theme) {
       return NextResponse.json(
@@ -17,34 +17,50 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `
-请为3-6岁儿童创作一个中文睡前故事。
+    let lengthRule = "故事总长度控制在700-900字。";
+    if (length === "短故事（3分钟）") {
+      lengthRule = "故事总长度控制在400-600字。";
+    } else if (length === "长故事（8分钟）") {
+      lengthRule = "故事总长度控制在900-1200字。";
+    }
 
-输入设定：
+    const prompt = `
+你是一位擅长亲子陪伴场景的儿童睡前故事作者。
+
+你的读者不是孩子本人，而是“家长”。
+请生成一篇适合家长在睡前讲给 3-6 岁孩子听的中文故事。
+
+已知设定：
+- 孩子名字：${childName || "未提供"}
 - 人物1：${char1}
 - 人物2：${char2}
 - 人物关系：${relation}
 - 故事场景：${scene}
 - 故事主题：${theme}
+- 故事长度：${length || "标准（5分钟）"}
 
-输出要求：
-1. 先给一个简短温柔的故事标题。
-2. 再写故事正文。
-3. 故事总长度控制在700-900字。
-4. 风格像绘本旁白，温暖、柔和、有画面感。
-5. 必须包含3-5句简短自然对话。
-6. 结构清晰：
+写作要求：
+1. 先输出一个简短、温柔、像绘本名字一样的标题。
+2. 再输出故事正文。
+3. ${lengthRule}
+4. 风格像“家长讲述稿”，家长拿到后可以直接读给孩子听。
+5. 语言要温暖、简单、柔和，有画面感。
+6. 必须包含 3-5 句简短自然的对话。
+7. 结构必须清晰：
    - 开头：介绍角色和场景
    - 中间：出现一个轻微的小问题
    - 发展：角色一起解决问题
    - 结尾：安静、温柔、适合入睡
-7. 用词适合3-6岁儿童，句子不要太长。
-8. 不要恐怖、暴力、惩罚、成人内容、复杂说教。
-9. 结尾必须有明显助眠感。
-10. 严格返回 JSON，不要加 markdown，不要加解释，格式如下：
+8. 不要恐怖、暴力、惩罚、成人内容，不要复杂说教。
+9. 如果提供了孩子名字，请自然地、轻柔地融入故事，但不要太生硬。
+10. 结尾要有明显助眠感。
+11. 另外再给一段“讲故事小提示”，是给家长的，比如可以停顿哪里、可以问孩子什么问题。
+
+请严格返回 JSON，不要加 markdown，不要加解释，格式如下：
 {
   "title": "故事标题",
-  "story": "故事正文"
+  "story": "故事正文",
+  "storyTip": "给家长的讲故事小提示"
 }
 `;
 
@@ -61,7 +77,7 @@ export async function POST(req: Request) {
 
     const content = response.choices[0]?.message?.content || "";
 
-    let parsed: { title?: string; story?: string } = {};
+    let parsed: { title?: string; story?: string; storyTip?: string } = {};
 
     try {
       parsed = JSON.parse(content);
@@ -75,6 +91,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       title: parsed.title || "今晚的小故事",
       story: parsed.story || "",
+      storyTip: parsed.storyTip || "",
     });
   } catch (error) {
     console.error("生成故事失败：", error);
