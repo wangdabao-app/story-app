@@ -8,7 +8,18 @@ const client = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { childName, char1, char2, relation, scene, theme, length } = await req.json();
+    const {
+      childName,
+      char1,
+      char2,
+      relation,
+      scene,
+      theme,
+      length,
+      previousStory,
+      previousTitle,
+      continueStory,
+    } = await req.json();
 
     if (!char1 || !char2 || !relation || !scene || !theme) {
       return NextResponse.json(
@@ -39,9 +50,22 @@ export async function POST(req: Request) {
 - 故事主题：${theme}
 - 故事长度：${length || "标准（5分钟）"}
 
+${continueStory && previousStory ? `
+这是一个连续故事任务。
+上一集的标题是：${previousTitle || "上一集"}
+上一集的内容如下：
+${previousStory}
+
+请你在保留相同角色、关系、整体氛围的前提下，写“下一集”。
+下一集必须自然承接上一集，不能像重新生成一个完全无关的新故事。
+剧情要有一点新的小变化、新的小问题，但整体氛围仍然温暖、适合睡前。
+` : `
+这不是连续故事，请直接生成第一篇完整故事。
+`}
+
 写作要求：
 1. 先输出一个简短、温柔、像绘本名字一样的标题。
-2. 再输出故事正文。
+2. 再写故事正文。
 3. ${lengthRule}
 4. 风格像“家长讲述稿”，家长拿到后可以直接读给孩子听。
 5. 语言要温暖、简单、柔和，有画面感。
@@ -55,6 +79,7 @@ export async function POST(req: Request) {
 9. 如果提供了孩子名字，请自然地、轻柔地融入故事，但不要太生硬。
 10. 结尾要有明显助眠感。
 11. 另外再给一段“讲故事小提示”，是给家长的，比如可以停顿哪里、可以问孩子什么问题。
+12. 如果是连续故事，标题要明显像“下一集”，但不要直接写“第2集”也可以，用自然的方式延续。
 
 请严格返回 JSON，不要加 markdown，不要加解释，格式如下：
 {

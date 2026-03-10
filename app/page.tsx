@@ -6,6 +6,7 @@ type SavedStory = {
   id: string;
   title: string;
   story: string;
+  storyTip: string;
   childName: string;
   char1: string;
   char2: string;
@@ -113,6 +114,9 @@ export default function Home() {
           scene,
           theme,
           length,
+          previousStory: "",
+          previousTitle: "",
+          continueStory: false,
         }),
       });
 
@@ -124,6 +128,54 @@ export default function Home() {
       }
 
       setTitle(data.title || "今晚的小故事");
+      setStory(data.story || "");
+      setStoryTip(data.storyTip || "");
+    } catch {
+      setError("网络开小差了，请稍后再试。");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateNextStory = async () => {
+    setError("");
+
+    if (!story) {
+      setError("请先生成一个故事，再继续下一集。");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      stopReading();
+
+      const res = await fetch("/api/story", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          childName,
+          char1,
+          char2,
+          relation,
+          scene,
+          theme,
+          length,
+          previousStory: story,
+          previousTitle: title,
+          continueStory: true,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "下一集生成失败，请稍后再试。");
+        return;
+      }
+
+      setTitle(data.title || "新的故事");
       setStory(data.story || "");
       setStoryTip(data.storyTip || "");
     } catch {
@@ -169,6 +221,7 @@ export default function Home() {
       id: crypto.randomUUID(),
       title: title || "今晚的小故事",
       story,
+      storyTip,
       childName,
       char1,
       char2,
@@ -193,8 +246,8 @@ export default function Home() {
     setLength(item.length);
     setTitle(item.title);
     setStory(item.story);
+    setStoryTip(item.storyTip || "");
     setError("");
-    setStoryTip("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -209,8 +262,29 @@ export default function Home() {
           <p className="mb-2 text-sm text-orange-500">专为家长设计的睡前故事工具</p>
           <h1 className="text-4xl font-bold tracking-tight text-orange-600">MoonStory</h1>
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">
-            AI睡前故事助手 · 帮家长轻松定制今晚的故事，让讲故事变得简单。
+            AI睡前故事助手 · 帮家长快速定制今晚的故事，让讲故事变得更轻松。
           </p>
+        </div>
+
+        <div className="mb-8 grid gap-4 rounded-3xl border border-orange-100 bg-white p-6 shadow-sm md:grid-cols-3">
+          <div>
+            <p className="text-sm font-semibold text-orange-500">1. 定制故事</p>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              输入人物、关系、场景和主题，快速生成一篇适合睡前讲给孩子听的故事。
+            </p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-orange-500">2. 直接讲给孩子听</p>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              故事会更像家长讲述稿，还会附带简单提示，帮助你更自然地讲出来。
+            </p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-orange-500">3. 喜欢就继续下一集</p>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              如果孩子喜欢这组角色，可以继续生成下一集，把一次故事变成连续故事。
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
@@ -289,6 +363,14 @@ export default function Home() {
                 🎲 随机生成一个故事
               </button>
 
+              <button
+                onClick={generateNextStory}
+                disabled={!story || loading}
+                className="rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 font-medium text-purple-600 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                📚 继续下一集
+              </button>
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={readStory}
@@ -351,8 +433,46 @@ export default function Home() {
                       <p className="whitespace-pre-line text-sm leading-7 text-gray-600">{storyTip}</p>
                     </div>
                   )}
+
+                  <div className="mt-6 rounded-2xl border border-purple-200 bg-purple-50 p-4">
+                    <p className="text-sm font-semibold text-purple-600">孩子喜欢这篇故事？</p>
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      你可以直接点击“继续下一集”，沿用同样的角色和设定，继续往下讲。
+                    </p>
+                    <button
+                      onClick={generateNextStory}
+                      disabled={loading}
+                      className="mt-3 rounded-xl bg-purple-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      📚 继续这个故事
+                    </button>
+                  </div>
                 </div>
               )}
+            </div>
+
+            <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-xl font-semibold text-gray-800">家长使用建议</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl bg-orange-50 p-4">
+                  <p className="text-sm font-semibold text-orange-500">讲之前</p>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    可以先问孩子：“今晚你想听森林里的故事，还是月亮下的故事？”
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-4">
+                  <p className="text-sm font-semibold text-orange-500">讲的时候</p>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    读到对话时稍微放慢一点，孩子会更容易沉浸进去，也更愿意听下去。
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-4">
+                  <p className="text-sm font-semibold text-orange-500">讲完后</p>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    如果孩子很喜欢这组角色，第二天可以直接继续下一集，形成连续故事习惯。
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
