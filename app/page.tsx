@@ -299,7 +299,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f7f7f7]">
-      <div className="mx-auto max-w-md px-3 pb-8 pt-4 sm:max-w-2xl sm:px-6">
+      <div className="mx-auto max-w-md px-3 pb-28 pt-4 sm:max-w-2xl sm:px-6 sm:pb-8">
         <div className="mb-4 rounded-[28px] bg-gradient-to-br from-orange-400 to-amber-300 px-5 py-6 text-white shadow-sm">
           <p className="text-xs opacity-90">AI睡前故事助手</p>
           <h1 className="mt-1 text-3xl font-bold">MoonStory</h1>
@@ -311,15 +311,15 @@ export default function Home() {
         <div className="mb-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl bg-white p-3 text-center shadow-sm">
             <p className="text-xs text-orange-500">步骤1</p>
-            <p className="mt-1 text-xs leading-5 text-gray-600">填几个关键词</p>
+            <p className="mt-1 whitespace-nowrap text-xs leading-5 text-gray-600">填关键词</p>
           </div>
           <div className="rounded-2xl bg-white p-3 text-center shadow-sm">
             <p className="text-xs text-orange-500">步骤2</p>
-            <p className="mt-1 text-xs leading-5 text-gray-600">生成故事稿</p>
+            <p className="mt-1 whitespace-nowrap text-xs leading-5 text-gray-600">生成故事</p>
           </div>
           <div className="rounded-2xl bg-white p-3 text-center shadow-sm">
             <p className="text-xs text-orange-500">步骤3</p>
-            <p className="mt-1 text-xs leading-5 text-gray-600">喜欢就继续下一集</p>
+            <p className="mt-1 whitespace-nowrap text-xs leading-5 text-gray-600">喜欢就续集</p>
           </div>
         </div>
 
@@ -437,7 +437,7 @@ export default function Home() {
               disabled={!canGenerate}
               className="w-full rounded-2xl bg-orange-400 px-4 py-3.5 text-base font-medium text-white disabled:opacity-50"
             >
-              {loading ? "生成中..." : "生成今晚的故事"}
+              {loading ? "生成中..." : "生成故事"}
             </button>
 
             <button
@@ -468,7 +468,7 @@ export default function Home() {
                 disabled={!story}
                 className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
-                ⭐ 收藏故事
+                ⭐ 收藏
               </button>
             </div>
           </div>
@@ -505,7 +505,7 @@ export default function Home() {
                     disabled={!story}
                     className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600 shadow-sm disabled:opacity-50"
                   >
-                    ⭐ 收藏这篇
+                    ⭐ 收藏
                   </button>
                 </div>
                 <h2 className="mb-4 text-2xl font-bold leading-tight text-orange-600">{title}</h2>
@@ -562,7 +562,7 @@ export default function Home() {
                   disabled={loading}
                   className="mt-3 w-full rounded-2xl bg-purple-500 px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
                 >
-                  📚 继续这个故事
+                  📚 继续下一集
                 </button>
               </div>
             </>
@@ -622,20 +622,20 @@ export default function Home() {
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <button
                       onClick={() => loadSavedStory(item)}
-                      className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-orange-500"
+                      className="whitespace-nowrap rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-orange-500"
                     >
                       查看
                     </button>
                     <button
                       onClick={() => continueFromSavedStory(item)}
                       disabled={loading}
-                      className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-purple-600 disabled:opacity-50"
+                      className="whitespace-nowrap rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-purple-600 disabled:opacity-50"
                     >
                       继续下一集
                     </button>
                     <button
                       onClick={() => deleteSavedStory(item.id)}
-                      className="rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-red-500"
+                      className="whitespace-nowrap rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-red-500"
                     >
                       删除
                     </button>
@@ -645,6 +645,48 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* Mobile: bottom action bar (single-hand friendly) */}
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:hidden">
+          <div className="mx-auto max-w-md">
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => (isSpeaking ? stopReading() : readStory())}
+                disabled={!story}
+                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
+              >
+                {isSpeaking ? "停止" : "朗读"}
+              </button>
+              <button
+                type="button"
+                onClick={saveCurrentStory}
+                disabled={!story}
+                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
+              >
+                收藏
+              </button>
+              <button
+                type="button"
+                onClick={generateNextStory}
+                disabled={!story || loading}
+                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-purple-700 disabled:opacity-50"
+              >
+                下一集
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMobileTab("custom");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="whitespace-nowrap rounded-2xl bg-orange-400 px-2 py-3 text-xs font-semibold text-white"
+              >
+                去生成
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
