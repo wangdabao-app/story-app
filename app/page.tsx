@@ -538,9 +538,13 @@ export default function Home() {
     <main className="min-h-screen bg-[#f7f7f7]">
       <div className="mx-auto max-w-md px-3 pb-28 pt-4 sm:max-w-2xl sm:px-6 sm:pb-8">
         <div className="mb-4 rounded-[28px] bg-gradient-to-br from-orange-400 to-amber-300 px-5 py-6 text-white shadow-sm">
-          <p className="text-xs opacity-90">AI睡前故事助手</p>
-          <h1 className="mt-1 text-3xl font-bold">MoonStory</h1>
-          <p className="mt-2 text-sm leading-6 text-white/90">
+          <h1 className="mt-1 text-3xl font-bold">
+            MoonStory
+            <span className="ml-2 align-middle text-base font-semibold tracking-wide">
+              – AI睡前故事助手
+            </span>
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-white/90">
             帮家长快速定制今晚的故事，讲故事更轻松，孩子更容易听进去。
           </p>
         </div>
