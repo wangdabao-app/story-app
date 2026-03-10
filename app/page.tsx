@@ -890,40 +890,42 @@ export default function Home() {
         </section>
 
         {/* Mobile: bottom action bar (single-hand friendly) */}
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:hidden">
-          <div className="mx-auto max-w-md">
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={readStory}
-                disabled={!canRead}
-                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
-              >
-                朗读
-              </button>
-              <button
-                type="button"
-                onClick={stopReading}
-                disabled={!canStop}
-                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
-              >
-                停止
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!story) return;
-                  showToast("正在生成下一集…");
-                  void generateNextStory();
-                }}
-                disabled={!story || loading}
-                className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-purple-700 disabled:opacity-50"
-              >
-                继续生成
-              </button>
+        {activeMobileTab === "story" && !activeFavorite && (
+          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:hidden">
+            <div className="mx-auto max-w-md">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={readStory}
+                  disabled={!canRead}
+                  className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
+                >
+                  朗读
+                </button>
+                <button
+                  type="button"
+                  onClick={stopReading}
+                  disabled={!canStop}
+                  className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
+                >
+                  停止
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!story) return;
+                    showToast("正在生成下一集…");
+                    void generateNextStory();
+                  }}
+                  disabled={!story || loading}
+                  className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-purple-700 disabled:opacity-50"
+                >
+                  继续生成
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Toast */}
         {toast && (
