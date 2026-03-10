@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type SavedStory = {
   id: string;
@@ -17,11 +17,46 @@ type SavedStory = {
   createdAt: string;
 };
 
-const randomCharacters1 = ["豆豆小熊", "团团小兔", "圆圆小猫", "乐乐小狐狸", "阿星小恐龙", "小云朵"];
-const randomCharacters2 = ["星星萤火虫", "月牙小鹿", "泡泡小鸭", "软软小熊", "小海豚", "小松果"];
-const randomRelations = ["好朋友", "兄妹", "姐弟", "同学", "邻居", "小伙伴"];
-const randomScenes = ["森林小屋", "云朵村", "月亮船", "海边小屋", "星星花园", "彩虹山坡"];
-const randomThemes = ["不怕黑", "勇敢", "分享", "交朋友", "自信", "诚实"];
+const randomCharacters1 = [
+  "豆豆小熊",
+  "团团小兔",
+  "圆圆小猫",
+  "乐乐小狐狸",
+  "阿星小恐龙",
+  "小云朵",
+  "叮叮小松鼠",
+  "暖暖小刺猬",
+  "咕咕小鸽子",
+  "糯糯小熊猫",
+];
+const randomCharacters2 = [
+  "星星萤火虫",
+  "月牙小鹿",
+  "泡泡小鸭",
+  "软软小熊",
+  "小海豚",
+  "小松果",
+  "小瓢虫",
+  "小海星",
+  "小青蛙",
+  "小雪团",
+];
+const randomRelations = ["好朋友", "兄妹", "姐弟", "同学", "邻居", "小伙伴", "搭档", "同路人"];
+const randomScenes = [
+  "森林小屋",
+  "云朵村",
+  "月亮船",
+  "海边小屋",
+  "星星花园",
+  "彩虹山坡",
+  "蘑菇小镇",
+  "萤火虫小路",
+  "棉花糖云海",
+  "风铃小院",
+];
+const randomThemes = ["不怕黑", "勇敢", "分享", "交朋友", "自信", "诚实", "耐心", "谢谢你"];
+
+const RECENT_RANDOM_KEY = "moonstory-recent-random-keys";
 
 function pickOne<T>(arr: T[]) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -55,6 +90,11 @@ export default function Home() {
   const [showAdviceOnMobile, setShowAdviceOnMobile] = useState(false);
   const [toast, setToast] = useState<{ message: string; id: number } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeFavorite, setActiveFavorite] = useState<SavedStory | null>(null);
+  const [recentRandomKeys, setRecentRandomKeys] = useState<string[]>([]);
+
+  const speechQueueRef = useRef<string[]>([]);
+  const speechCancelledRef = useRef(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("moonstory-saved-stories");
@@ -64,6 +104,20 @@ export default function Home() {
       } catch {
         setSavedStories([]);
       }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(RECENT_RANDOM_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as string[];
+      if (Array.isArray(parsed)) {
+        setRecentRandomKeys(parsed.filter((x) => typeof x === "string"));
+      }
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -79,6 +133,18 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("moonstory-saved-stories", JSON.stringify(savedStories));
   }, [savedStories]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        RECENT_RANDOM_KEY,
+        JSON.stringify(recentRandomKeys.slice(0, 30)),
+      );
+    } catch {
+      // ignore
+    }
+  }, [recentRandomKeys]);
 
   useEffect(() => {
     return () => {
@@ -100,14 +166,98 @@ export default function Home() {
     return char1 && char2 && relation && scene && theme && !loading;
   }, [char1, char2, relation, scene, theme, loading]);
 
+  const canRead = Boolean(story) && !isSpeaking;
+  const canStop = isSpeaking;
+
+  const isCurrentStorySaved = useMemo(() => {
+    if (!story) return false;
+    const normalized = story.trim();
+    return savedStories.some((s) => s.story.trim() === normalized);
+  }, [savedStories, story]);
+
+  const storyParagraphs = useMemo(() => {
+    if (!story) return [];
+    return story
+      .split(/\n+/g)
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }, [story]);
+
   const fillRandomStoryInputs = () => {
-    setChar1(pickOne(randomCharacters1));
-    setChar2(pickOne(randomCharacters2));
-    setRelation(pickOne(randomRelations));
-    setScene(pickOne(randomScenes));
-    setTheme(pickOne(randomThemes));
-    setLength(pickOne(["短故事（3分钟）", "标准（5分钟）", "长故事（8分钟）"]));
+    const makeKey = (v: {
+      c1: string;
+      c2: string;
+      r: string;
+      s: string;
+      t: string;
+      l: string;
+    }) => `${v.c1}|${v.c2}|${v.r}|${v.s}|${v.t}|${v.l}`;
+
+    const currentKey = makeKey({
+      c1: char1,
+      c2: char2,
+      r: relation,
+      s: scene,
+      t: theme,
+      l: length,
+    });
+
+    const recentSet = new Set(recentRandomKeys);
+
+    let picked = {
+      c1: "",
+      c2: "",
+      r: "",
+      s: "",
+      t: "",
+      l: "",
+    };
+
+    // 多尝试几次，尽量避开“最近用过的组合”和“当前组合”
+    for (let i = 0; i < 14; i += 1) {
+      const candidate = {
+        c1: pickOne(randomCharacters1),
+        c2: pickOne(randomCharacters2),
+        r: pickOne(randomRelations),
+        s: pickOne(randomScenes),
+        t: pickOne(randomThemes),
+        l: pickOne(["短故事（3分钟）", "标准（5分钟）", "长故事（8分钟）"]),
+      };
+
+      // 避免人物撞名（偶发）
+      if (candidate.c1 === candidate.c2) continue;
+
+      const k = makeKey(candidate);
+      if (k === currentKey) continue;
+      if (recentSet.has(k)) continue;
+
+      picked = candidate;
+      break;
+    }
+
+    // 若实在避不开，就退化为普通随机
+    if (!picked.c1) {
+      picked = {
+        c1: pickOne(randomCharacters1),
+        c2: pickOne(randomCharacters2),
+        r: pickOne(randomRelations),
+        s: pickOne(randomScenes),
+        t: pickOne(randomThemes),
+        l: pickOne(["短故事（3分钟）", "标准（5分钟）", "长故事（8分钟）"]),
+      };
+    }
+
+    setChar1(picked.c1);
+    setChar2(picked.c2);
+    setRelation(picked.r);
+    setScene(picked.s);
+    setTheme(picked.t);
+    setLength(picked.l);
     setError("");
+
+    const newKey = makeKey(picked);
+    setRecentRandomKeys((prev) => [newKey, ...prev.filter((x) => x !== newKey)].slice(0, 30));
+    showToast("已为你换一组新设定");
   };
 
   type StoryApiPayload = {
@@ -210,32 +360,92 @@ export default function Home() {
   };
 
   const readStory = () => {
-    if (!story || !("speechSynthesis" in window)) return;
+    if (isSpeaking) return;
+    if (!story) return;
+    if (!("speechSynthesis" in window)) {
+      showToast("当前浏览器不支持朗读");
+      return;
+    }
 
-    window.speechSynthesis.cancel();
+    const synth = window.speechSynthesis;
+    synth.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(`${title}。${story}`);
-    utterance.lang = "zh-CN";
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
+    // iOS/部分浏览器需要先触发 voices 初始化
+    try {
+      synth.getVoices();
+    } catch {
+      // ignore
+    }
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
+    const raw = `${title ? `${title}。` : ""}${story}`.trim();
+    const normalized = raw.replace(/\s+/g, " ");
+
+    // 将长文本拆成更稳的短段，避免移动端“无声/直接结束”
+    const splitIntoChunks = (text: string, maxLen = 120) => {
+      const sentences = text
+        .split(/(?<=[。！？!?…])|\n+/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const chunks: string[] = [];
+      let buf = "";
+      for (const s of sentences) {
+        if (!buf) {
+          buf = s;
+          continue;
+        }
+        if ((buf + s).length <= maxLen) {
+          buf += s;
+        } else {
+          chunks.push(buf);
+          buf = s;
+        }
+      }
+      if (buf) chunks.push(buf);
+      return chunks;
     };
 
-    utterance.onerror = () => {
-      setIsSpeaking(false);
+    speechCancelledRef.current = false;
+    speechQueueRef.current = splitIntoChunks(normalized, 140);
+
+    const speakNext = () => {
+      if (speechCancelledRef.current) return;
+      const next = speechQueueRef.current.shift();
+      if (!next) {
+        setIsSpeaking(false);
+        return;
+      }
+
+      const u = new SpeechSynthesisUtterance(next);
+      u.lang = "zh-CN";
+      u.rate = 0.9;
+      u.pitch = 1;
+      u.onend = () => speakNext();
+      u.onerror = () => {
+        setIsSpeaking(false);
+        showToast("朗读失败，建议换浏览器试试");
+      };
+
+      try {
+        synth.speak(u);
+      } catch {
+        setIsSpeaking(false);
+        showToast("朗读失败，建议换浏览器试试");
+      }
     };
 
-    window.speechSynthesis.speak(utterance);
     setIsSpeaking(true);
     showToast("开始朗读");
+    speakNext();
   };
 
   const stopReading = () => {
+    if (!isSpeaking) return;
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    speechCancelledRef.current = true;
+    speechQueueRef.current = [];
     setIsSpeaking(false);
     showToast("已停止朗读");
   };
@@ -243,6 +453,10 @@ export default function Home() {
   const saveCurrentStory = () => {
     if (!story) return;
     if (saving) return;
+    if (isCurrentStorySaved) {
+      showToast("已收藏，不重复添加");
+      return;
+    }
 
     const newItem: SavedStory = {
       id: crypto.randomUUID(),
@@ -261,11 +475,6 @@ export default function Home() {
 
     setSaving(true);
     setSavedStories((prev) => {
-      const exists = prev.some((s) => s.story.trim() === story.trim());
-      if (exists) {
-        showToast("已收藏，不重复添加");
-        return prev;
-      }
       showToast("已收藏");
       return [newItem, ...prev];
     });
@@ -322,6 +531,7 @@ export default function Home() {
 
   const deleteSavedStory = (id: string) => {
     setSavedStories((prev) => prev.filter((item) => item.id !== id));
+    setActiveFavorite((fav) => (fav?.id === id ? null : fav));
   };
 
   return (
@@ -478,24 +688,24 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={readStory}
-                disabled={!story || isSpeaking}
+                disabled={!canRead}
                 className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
                 🔊 朗读
               </button>
               <button
                 onClick={stopReading}
-                disabled={!isSpeaking}
+                disabled={!canStop}
                 className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
                 停止
               </button>
               <button
                 onClick={saveCurrentStory}
-                disabled={!story}
+                disabled={!story || isCurrentStorySaved}
                 className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
-                ⭐ 收藏
+                {isCurrentStorySaved ? "已收藏" : "⭐ 收藏"}
               </button>
             </div>
           </div>
@@ -529,14 +739,20 @@ export default function Home() {
                   <p className="text-xs font-medium text-orange-500">今晚的睡前故事</p>
                   <button
                     onClick={saveCurrentStory}
-                    disabled={!story}
+                    disabled={!story || isCurrentStorySaved}
                     className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-orange-600 shadow-sm disabled:opacity-50"
                   >
-                    ⭐ 收藏
+                    {isCurrentStorySaved ? "已收藏" : "⭐ 收藏"}
                   </button>
                 </div>
                 <h2 className="mb-4 text-2xl font-bold leading-tight text-orange-600">{title}</h2>
-                <div className="whitespace-pre-line text-[17px] leading-8 text-gray-700">{story}</div>
+                <div className="text-[17px] leading-8 text-gray-700">
+                  {storyParagraphs.map((p, idx) => (
+                    <p key={idx} className="mb-3 last:mb-0">
+                      {p}
+                    </p>
+                  ))}
+                </div>
               </div>
 
               {storyTip && (
@@ -648,7 +864,7 @@ export default function Home() {
 
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <button
-                      onClick={() => loadSavedStory(item)}
+                      onClick={() => setActiveFavorite(item)}
                       className="whitespace-nowrap rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-orange-500"
                     >
                       查看
@@ -680,7 +896,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={readStory}
-                disabled={!story}
+                disabled={!canRead}
                 className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
               >
                 朗读
@@ -688,7 +904,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={stopReading}
-                disabled={!isSpeaking}
+                disabled={!canStop}
                 className="whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-2 py-3 text-xs font-semibold text-gray-700 disabled:opacity-50"
               >
                 停止
@@ -714,6 +930,79 @@ export default function Home() {
           <div className="fixed inset-x-0 bottom-24 z-30 flex justify-center px-3 sm:hidden">
             <div className="rounded-full bg-gray-900/90 px-4 py-2 text-xs font-medium text-white shadow-lg">
               {toast.message}
+            </div>
+          </div>
+        )}
+
+        {/* Favorite drawer/modal */}
+        {activeFavorite && (
+          <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 px-3 pb-24 sm:items-center sm:pb-0">
+            <div className="w-full max-w-md rounded-[24px] bg-white shadow-xl sm:max-w-2xl">
+              <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-gray-400">收藏故事</p>
+                  <h4 className="mt-1 truncate text-lg font-semibold text-orange-600">
+                    {activeFavorite.title}
+                  </h4>
+                  <p className="mt-1 text-xs text-gray-500">
+                    主题：{activeFavorite.theme} · {formatTime(activeFavorite.createdAt)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveFavorite(null)}
+                  className="shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700"
+                >
+                  关闭
+                </button>
+              </div>
+
+              <div className="max-h-[65vh] overflow-auto px-4 py-4 sm:px-6">
+                <div className="text-[15px] leading-7 text-gray-700">
+                  {activeFavorite.story
+                    .split(/\n+/g)
+                    .map((p) => p.trim())
+                    .filter(Boolean)
+                    .map((p, idx) => (
+                      <p key={idx} className="mb-3 last:mb-0">
+                        {p}
+                      </p>
+                    ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 border-t border-gray-100 px-4 py-4 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadSavedStory(activeFavorite);
+                    setActiveFavorite(null);
+                    showToast("已切换到该故事");
+                  }}
+                  className="whitespace-nowrap rounded-2xl bg-orange-50 px-3 py-3 text-sm font-semibold text-orange-600"
+                >
+                  设为当前
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast("正在生成下一集…");
+                    void continueFromSavedStory(activeFavorite);
+                    setActiveFavorite(null);
+                  }}
+                  disabled={loading}
+                  className="whitespace-nowrap rounded-2xl bg-purple-50 px-3 py-3 text-sm font-semibold text-purple-700 disabled:opacity-50"
+                >
+                  继续下一集
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteSavedStory(activeFavorite.id)}
+                  className="whitespace-nowrap rounded-2xl bg-red-50 px-3 py-3 text-sm font-semibold text-red-600"
+                >
+                  删除
+                </button>
+              </div>
             </div>
           </div>
         )}
