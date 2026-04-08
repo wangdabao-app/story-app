@@ -13,7 +13,8 @@ const secretId = process.env.TENCENTCLOUD_SECRET_ID || "";
 const secretKey = process.env.TENCENTCLOUD_SECRET_KEY || "";
 const region = process.env.TENCENTCLOUD_REGION || "ap-guangzhou";
 const voiceType = Number(process.env.TENCENTCLOUD_TTS_VOICE_TYPE || 101001);
-const codec = (process.env.TENCENTCLOUD_TTS_CODEC || "mp3").toUpperCase();
+const rawCodec = (process.env.TENCENTCLOUD_TTS_CODEC || "mp3").toLowerCase();
+const codec = rawCodec === "wav" || rawCodec === "pcm" || rawCodec === "mp3" ? rawCodec : "mp3";
 const speed = Number(process.env.TENCENTCLOUD_TTS_SPEED || 0);
 const volume = Number(process.env.TENCENTCLOUD_TTS_VOLUME || 0);
 const projectId = Number(process.env.TENCENTCLOUD_TTS_PROJECT_ID || 0);
@@ -167,7 +168,7 @@ export async function POST(req: Request) {
     return new Response(audioBuffer, {
       status: 200,
       headers: {
-        "Content-Type": codec === "WAV" ? "audio/wav" : "audio/mpeg",
+        "Content-Type": codec === "wav" ? "audio/wav" : "audio/mpeg",
         "Cache-Control": "no-store",
       },
     });
