@@ -104,6 +104,7 @@ export default function Home() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAbortRef = useRef<AbortController | null>(null);
   const ttsAudioUrlRef = useRef<string | null>(null);
+  const ttsControllersRef = useRef<AbortController[]>([]);
 
   useEffect(() => {
     const raw = localStorage.getItem("moonstory-saved-stories");
@@ -182,6 +183,8 @@ export default function Home() {
         window.speechSynthesis.cancel();
       }
       ttsAbortRef.current?.abort();
+      ttsControllersRef.current.forEach((c) => c.abort());
+      ttsControllersRef.current = [];
       if (ttsAudioRef.current) {
         ttsAudioRef.current.pause();
       }
@@ -480,75 +483,100 @@ export default function Home() {
     const raw = `${title ? `${title}。` : ""}${story}`.trim();
     const normalized = normalizeForTts(raw);
     speechCancelledRef.current = false;
-    // 移动端更容易卡顿，段落稍短一点更稳、更自然
-    const chunks = splitIntoChunks(normalized, isMobile ? 90 : 120);
+    const shouldUseCloudTts =
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window) ||
+      isTtsLikelyUnsupported;
+
+    // 云端 TTS 段落稍长，减少切换次数；浏览器 TTS 继续用更短分段以求稳定
+    const chunkSize = shouldUseCloudTts ? (isMobile ? 170 : 220) : (isMobile ? 90 : 120);
+    const chunks = splitIntoChunks(normalized, chunkSize);
     speechQueueRef.current = [...chunks];
 
     const playByTencentTts = async () => {
-      const playNext = async (): Promise<void> => {
-        if (speechCancelledRef.current) return;
-        const next = speechQueueRef.current.shift();
-        if (!next) {
-          setIsSpeaking(false);
-          return;
-        }
+      const cloudChunks = [...speechQueueRef.current];
 
-        ttsAbortRef.current?.abort();
+      const fetchTtsBlob = async (text: string) => {
         const controller = new AbortController();
         ttsAbortRef.current = controller;
-
+        ttsControllersRef.current.push(controller);
         try {
           const res = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: next }),
+            body: JSON.stringify({ text }),
             signal: controller.signal,
           });
 
           if (!res.ok) {
-            const msg = (await res.json().catch(() => ({ error: "" }))).error || "语音生成失败";
+            const msg =
+              (await res.json().catch(() => ({ error: "" }))).error || "语音生成失败";
             throw new Error(msg);
           }
-
-          const blob = await res.blob();
-          if (ttsAudioUrlRef.current) {
-            URL.revokeObjectURL(ttsAudioUrlRef.current);
-            ttsAudioUrlRef.current = null;
-          }
-          const url = URL.createObjectURL(blob);
-          ttsAudioUrlRef.current = url;
-
-          if (!ttsAudioRef.current) {
-            ttsAudioRef.current = new Audio();
-          }
-          const audio = ttsAudioRef.current;
-          audio.src = url;
-          audio.onended = () => {
-            if (ttsAudioUrlRef.current) {
-              URL.revokeObjectURL(ttsAudioUrlRef.current);
-              ttsAudioUrlRef.current = null;
-            }
-            void playNext();
-          };
-          audio.onerror = () => {
-            setIsSpeaking(false);
-            showToast("语音播放失败，请稍后重试");
-          };
-
-          await audio.play();
-        } catch (e) {
-          if ((e as Error).name === "AbortError") return;
-          setIsSpeaking(false);
-          showToast((e as Error).message || "语音生成失败，请稍后重试");
+          return await res.blob();
+        } finally {
+          ttsControllersRef.current = ttsControllersRef.current.filter(
+            (c) => c !== controller,
+          );
         }
+      };
+
+      const playBlob = async (blob: Blob) => {
+        if (ttsAudioUrlRef.current) {
+          URL.revokeObjectURL(ttsAudioUrlRef.current);
+          ttsAudioUrlRef.current = null;
+        }
+        const url = URL.createObjectURL(blob);
+        ttsAudioUrlRef.current = url;
+
+        if (!ttsAudioRef.current) {
+          ttsAudioRef.current = new Audio();
+        }
+        const audio = ttsAudioRef.current;
+        audio.src = url;
+
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => resolve();
+          audio.onerror = () => reject(new Error("语音播放失败，请稍后重试"));
+          void audio.play().catch(() => reject(new Error("语音播放失败，请稍后重试")));
+        });
       };
 
       setIsSpeaking(true);
       showToast("开始朗读");
-      await playNext();
+
+      try {
+        let nextBlobPromise: Promise<Blob> | null = null;
+
+        for (let i = 0; i < cloudChunks.length; i += 1) {
+          if (speechCancelledRef.current) break;
+
+          let blob: Blob;
+          if (nextBlobPromise) {
+            blob = await nextBlobPromise;
+            nextBlobPromise = null;
+          } else {
+            blob = await fetchTtsBlob(cloudChunks[i]);
+          }
+
+          // 预取下一段，减少段间等待
+          if (i + 1 < cloudChunks.length) {
+            nextBlobPromise = fetchTtsBlob(cloudChunks[i + 1]);
+          }
+
+          if (speechCancelledRef.current) break;
+          await playBlob(blob);
+        }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          showToast((e as Error).message || "语音生成失败，请稍后重试");
+        }
+      } finally {
+        setIsSpeaking(false);
+      }
     };
 
-    if (typeof window === "undefined" || !("speechSynthesis" in window) || isTtsLikelyUnsupported) {
+    if (shouldUseCloudTts) {
       void playByTencentTts();
       return;
     }
@@ -605,6 +633,8 @@ export default function Home() {
     speechCancelledRef.current = true;
     speechQueueRef.current = [];
     ttsAbortRef.current?.abort();
+    ttsControllersRef.current.forEach((c) => c.abort());
+    ttsControllersRef.current = [];
     if (ttsAudioRef.current) {
       ttsAudioRef.current.pause();
       ttsAudioRef.current.currentTime = 0;
