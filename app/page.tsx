@@ -17,44 +17,48 @@ type SavedStory = {
   createdAt: string;
 };
 
-const randomCharacters1 = [
-  "豆豆小熊",
-  "团团小兔",
-  "圆圆小猫",
-  "乐乐小狐狸",
-  "阿星小恐龙",
-  "小云朵",
-  "叮叮小松鼠",
-  "暖暖小刺猬",
-  "咕咕小鸽子",
-  "糯糯小熊猫",
-];
-const randomCharacters2 = [
-  "星星萤火虫",
-  "月牙小鹿",
-  "泡泡小鸭",
-  "软软小熊",
-  "小海豚",
-  "小松果",
-  "小瓢虫",
-  "小海星",
-  "小青蛙",
-  "小雪团",
-];
-const randomRelations = ["好朋友", "兄妹", "姐弟", "同学", "邻居", "小伙伴", "搭档", "同路人"];
-const randomScenes = [
-  "森林小屋",
-  "云朵村",
-  "月亮船",
-  "海边小屋",
-  "星星花园",
-  "彩虹山坡",
-  "蘑菇小镇",
-  "萤火虫小路",
-  "棉花糖云海",
-  "风铃小院",
-];
-const randomThemes = ["不怕黑", "勇敢", "分享", "交朋友", "自信", "诚实", "耐心", "谢谢你"];
+// 组合式随机：用“昵称 + 性格 + 物种/角色”拼出更多可能性（降低重复率）
+const namePrefixes = ["豆豆", "团团", "圆圆", "乐乐", "阿星", "叮叮", "暖暖", "咕咕", "糯糯", "泡泡", "月牙", "小米", "小团子", "小南瓜", "小樱桃"];
+const nameAdjectives = ["勇敢", "软软", "亮亮", "慢慢", "轻轻", "暖暖", "甜甜", "乖乖", "好奇", "认真", "安安静静", "笑眯眯"];
+const species = ["小熊", "小兔", "小猫", "小狐狸", "小恐龙", "小松鼠", "小刺猬", "小鸽子", "小熊猫", "小鹿", "小鸭", "小海豚", "小青蛙", "小海星", "小瓢虫"];
+const specialRoles = ["小云朵", "小星星", "萤火虫", "小雪团", "小松果", "小风铃", "小月亮"];
+
+const randomRelations = ["好朋友", "兄妹", "姐弟", "同学", "邻居", "小伙伴", "搭档", "同路人", "临时队友"];
+
+const sceneBases = ["森林小屋", "云朵村", "月亮船", "海边小屋", "星星花园", "彩虹山坡", "蘑菇小镇", "萤火虫小路", "棉花糖云海", "风铃小院", "贝壳沙滩", "树洞图书馆"];
+const sceneDetails = ["有温柔的风铃声", "铺着软软的苔藓", "亮着一盏小夜灯", "飘着淡淡的花香", "有一条会发光的小路", "藏着一座小小秘密花园", "可以听到海浪轻轻拍手", "星光像牛奶一样柔和"];
+
+const randomThemes = ["不怕黑", "勇敢", "分享", "交朋友", "自信", "诚实", "耐心", "谢谢你", "学会等待", "学会表达"];
+const tinyGoals = ["找到回家的路", "把小灯点亮", "一起把玩具收好", "把饼干分一半", "学着说出心里话", "向新朋友打招呼", "把担心变小一点"];
+
+function buildRandomCharacter(style: "a" | "b") {
+  const base =
+    Math.random() < 0.25
+      ? pickOne(specialRoles)
+      : `${pickOne(namePrefixes)}${Math.random() < 0.5 ? pickOne(species) : pickOne(species)}`;
+
+  // 加一点性格标签（偶尔出现），让同一物种也更有差异
+  if (Math.random() < (style === "a" ? 0.55 : 0.4)) {
+    return `${pickOne(nameAdjectives)}的${base}`;
+  }
+  return base;
+}
+
+function buildRandomScene() {
+  const base = pickOne(sceneBases);
+  if (Math.random() < 0.65) {
+    return `${base}（${pickOne(sceneDetails)}）`;
+  }
+  return base;
+}
+
+function buildRandomTheme() {
+  const theme = pickOne(randomThemes);
+  if (Math.random() < 0.6) {
+    return `${theme}：${pickOne(tinyGoals)}`;
+  }
+  return theme;
+}
 
 const RECENT_RANDOM_KEY = "moonstory-recent-random-keys";
 
@@ -92,9 +96,14 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [activeFavorite, setActiveFavorite] = useState<SavedStory | null>(null);
   const [recentRandomKeys, setRecentRandomKeys] = useState<string[]>([]);
+  const [isTtsLikelyUnsupported, setIsTtsLikelyUnsupported] = useState(false);
 
   const speechQueueRef = useRef<string[]>([]);
   const speechCancelledRef = useRef(false);
+  const speechVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
+  const ttsAudioUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const raw = localStorage.getItem("moonstory-saved-stories");
@@ -104,6 +113,27 @@ export default function Home() {
       } catch {
         setSavedStories([]);
       }
+    }
+  }, []);
+
+  // 粗略识别一些常见“不支持或不稳定 TTS”的环境（比如微信内置浏览器等）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ua = window.navigator.userAgent || "";
+    const lower = ua.toLowerCase();
+    if (
+      lower.includes("micromessenger") || // 微信
+      lower.includes("qqbrowser") ||
+      lower.includes("ucbrowser") ||
+      lower.includes("baidubrowser") ||
+      lower.includes("baiduboxapp") ||
+      lower.includes("miuibrowser") ||
+      lower.includes("huawei") ||
+      lower.includes("vivobrowser") ||
+      lower.includes("oppobrowser") ||
+      !("speechSynthesis" in window)
+    ) {
+      setIsTtsLikelyUnsupported(true);
     }
   }, []);
 
@@ -150,6 +180,13 @@ export default function Home() {
     return () => {
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
+      }
+      ttsAbortRef.current?.abort();
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+      }
+      if (ttsAudioUrlRef.current) {
+        URL.revokeObjectURL(ttsAudioUrlRef.current);
       }
     };
   }, []);
@@ -216,11 +253,11 @@ export default function Home() {
     // 多尝试几次，尽量避开“最近用过的组合”和“当前组合”
     for (let i = 0; i < 14; i += 1) {
       const candidate = {
-        c1: pickOne(randomCharacters1),
-        c2: pickOne(randomCharacters2),
+        c1: buildRandomCharacter("a"),
+        c2: buildRandomCharacter("b"),
         r: pickOne(randomRelations),
-        s: pickOne(randomScenes),
-        t: pickOne(randomThemes),
+        s: buildRandomScene(),
+        t: buildRandomTheme(),
         l: pickOne(["短故事（3分钟）", "标准（5分钟）", "长故事（8分钟）"]),
       };
 
@@ -238,11 +275,11 @@ export default function Home() {
     // 若实在避不开，就退化为普通随机
     if (!picked.c1) {
       picked = {
-        c1: pickOne(randomCharacters1),
-        c2: pickOne(randomCharacters2),
+        c1: buildRandomCharacter("a"),
+        c2: buildRandomCharacter("b"),
         r: pickOne(randomRelations),
-        s: pickOne(randomScenes),
-        t: pickOne(randomThemes),
+        s: buildRandomScene(),
+        t: buildRandomTheme(),
         l: pickOne(["短故事（3分钟）", "标准（5分钟）", "长故事（8分钟）"]),
       };
     }
@@ -362,25 +399,7 @@ export default function Home() {
   const readStory = () => {
     if (isSpeaking) return;
     if (!story) return;
-    if (!("speechSynthesis" in window)) {
-      showToast("当前浏览器不支持朗读");
-      return;
-    }
 
-    const synth = window.speechSynthesis;
-    synth.cancel();
-
-    // iOS/部分浏览器需要先触发 voices 初始化
-    try {
-      synth.getVoices();
-    } catch {
-      // ignore
-    }
-
-    const raw = `${title ? `${title}。` : ""}${story}`.trim();
-    const normalized = raw.replace(/\s+/g, " ");
-
-    // 将长文本拆成更稳的短段，避免移动端“无声/直接结束”
     const splitIntoChunks = (text: string, maxLen = 120) => {
       const sentences = text
         .split(/(?<=[。！？!?…])|\n+/g)
@@ -397,16 +416,152 @@ export default function Home() {
         if ((buf + s).length <= maxLen) {
           buf += s;
         } else {
-          chunks.push(buf);
+          chunks.push(/[。！？…]$/.test(buf) ? buf : `${buf}。`);
           buf = s;
         }
       }
-      if (buf) chunks.push(buf);
+      if (buf) chunks.push(/[。！？…]$/.test(buf) ? buf : `${buf}。`);
       return chunks;
     };
 
+    const pickZhVoice = () => {
+      try {
+        const voices = synth.getVoices() || [];
+        const zh = voices.filter((v) => (v.lang || "").toLowerCase().startsWith("zh"));
+        if (zh.length === 0) return null;
+
+        // 优先：zh-CN + 本地语音（更自然、更顺）
+        const zhCN = zh.filter((v) => (v.lang || "").toLowerCase().startsWith("zh-cn"));
+        const local = (arr: SpeechSynthesisVoice[]) => arr.filter((v) => (v as any).localService);
+
+        return (
+          local(zhCN)[0] ||
+          zhCN[0] ||
+          local(zh)[0] ||
+          zh[0] ||
+          null
+        );
+      } catch {
+        return null;
+      }
+    };
+
+    if (!speechVoiceRef.current) {
+      speechVoiceRef.current = pickZhVoice();
+    }
+
+    const normalizeForTts = (input: string) => {
+      let text = input
+        .replace(/\s+/g, " ")
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/…{2,}/g, "……")
+        .replace(/[：]/g, "：")
+        .trim();
+
+      // 常见“读起来别扭/容易断错”的轻量优化
+      text = text
+        .replace(/30\s*秒/g, "三十秒")
+        .replace(/(\d+)\s*分钟/g, (_, n) => `${n}分钟`)
+        .replace(/(\d+)\s*个/g, (_, n) => `${n}个`);
+
+      // 轻量“纠音词典”：把容易读错/太书面导致断句怪的词换成更口语的同义表达
+      // 注意：不要做太激进的替换，避免改坏故事内容
+      const dict: Array<[RegExp, string]> = [
+        [/行走/g, "走路"],
+        [/一会儿/g, "一小会儿"],
+        [/不一会儿/g, "没一会儿"],
+      ];
+      for (const [re, rep] of dict) text = text.replace(re, rep);
+
+      return text;
+    };
+
+    const raw = `${title ? `${title}。` : ""}${story}`.trim();
+    const normalized = normalizeForTts(raw);
     speechCancelledRef.current = false;
-    speechQueueRef.current = splitIntoChunks(normalized, 140);
+    // 移动端更容易卡顿，段落稍短一点更稳、更自然
+    const chunks = splitIntoChunks(normalized, isMobile ? 90 : 120);
+    speechQueueRef.current = [...chunks];
+
+    const playByTencentTts = async () => {
+      const playNext = async (): Promise<void> => {
+        if (speechCancelledRef.current) return;
+        const next = speechQueueRef.current.shift();
+        if (!next) {
+          setIsSpeaking(false);
+          return;
+        }
+
+        ttsAbortRef.current?.abort();
+        const controller = new AbortController();
+        ttsAbortRef.current = controller;
+
+        try {
+          const res = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: next }),
+            signal: controller.signal,
+          });
+
+          if (!res.ok) {
+            const msg = (await res.json().catch(() => ({ error: "" }))).error || "语音生成失败";
+            throw new Error(msg);
+          }
+
+          const blob = await res.blob();
+          if (ttsAudioUrlRef.current) {
+            URL.revokeObjectURL(ttsAudioUrlRef.current);
+            ttsAudioUrlRef.current = null;
+          }
+          const url = URL.createObjectURL(blob);
+          ttsAudioUrlRef.current = url;
+
+          if (!ttsAudioRef.current) {
+            ttsAudioRef.current = new Audio();
+          }
+          const audio = ttsAudioRef.current;
+          audio.src = url;
+          audio.onended = () => {
+            if (ttsAudioUrlRef.current) {
+              URL.revokeObjectURL(ttsAudioUrlRef.current);
+              ttsAudioUrlRef.current = null;
+            }
+            void playNext();
+          };
+          audio.onerror = () => {
+            setIsSpeaking(false);
+            showToast("语音播放失败，请稍后重试");
+          };
+
+          await audio.play();
+        } catch (e) {
+          if ((e as Error).name === "AbortError") return;
+          setIsSpeaking(false);
+          showToast((e as Error).message || "语音生成失败，请稍后重试");
+        }
+      };
+
+      setIsSpeaking(true);
+      showToast("开始朗读");
+      await playNext();
+    };
+
+    if (typeof window === "undefined" || !("speechSynthesis" in window) || isTtsLikelyUnsupported) {
+      void playByTencentTts();
+      return;
+    }
+
+    const synth = window.speechSynthesis;
+    synth.cancel();
+
+    // iOS/部分浏览器需要先触发 voices 初始化
+    try {
+      synth.getVoices();
+    } catch {
+      // ignore
+    }
 
     const speakNext = () => {
       if (speechCancelledRef.current) return;
@@ -418,8 +573,11 @@ export default function Home() {
 
       const u = new SpeechSynthesisUtterance(next);
       u.lang = "zh-CN";
-      u.rate = 0.9;
+      u.rate = 0.88;
       u.pitch = 1;
+      if (speechVoiceRef.current) {
+        u.voice = speechVoiceRef.current;
+      }
       u.onend = () => speakNext();
       u.onerror = () => {
         setIsSpeaking(false);
@@ -446,6 +604,16 @@ export default function Home() {
     }
     speechCancelledRef.current = true;
     speechQueueRef.current = [];
+    ttsAbortRef.current?.abort();
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+      ttsAudioRef.current.src = "";
+    }
+    if (ttsAudioUrlRef.current) {
+      URL.revokeObjectURL(ttsAudioUrlRef.current);
+      ttsAudioUrlRef.current = null;
+    }
     setIsSpeaking(false);
     showToast("已停止朗读");
   };
